@@ -1,0 +1,22 @@
+version: '3.8'
+services:
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      DB_SERVER: ${DB_SERVER}
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_PORT: ${DB_PORT}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+    volumes:
+      - .:/app
+    working_dir: /app
+    command: npm start
+
+# To use this:
+# 1. Create .env file with your Azure SQL and Telegram credentials
+# 2. Run: docker-compose up -d
+# 3. Test: curl http://localhost:3000/health
