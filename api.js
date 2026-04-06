@@ -1,8 +1,8 @@
 const express = require('express');
-const sql = require('mssql');
 require('dotenv').config();
 const { poolPromise } = require('./database');
 const { fuzzyMatchObjects } = require('./fuzzyMatch');
+const { sql, poolPromise } = require('./database');
 
 const app = express();
 
