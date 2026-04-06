@@ -31,9 +31,27 @@ bot.command('search', async (ctx) => {
       return ctx.reply('Usage: /search <object>');
     }
 
-    const response = await axios.get(`${API_BASE}/search?object=${encodeURIComponent(object)}`);
-    const location = response.data;
+    const response = await axios.get(`${API_BASE}/search?object=${encodeURIComponent(object)}&format=json`);
+    
+    // Handle JSON response with fuzzy matches
+    if (response.data.matches && Array.isArray(response.data.matches)) {
+      if (response.data.matches.length === 0) {
+        return ctx.reply(`Could not find location for "${object}"`);
+      }
 
+      // Format matches with similarity scores
+      let message = `Found ${response.data.matches.length} match${response.data.matches.length > 1 ? 'es' : ''}:\n\n`;
+      
+      for (const match of response.data.matches) {
+        const similarity = match.similarity === 100 ? '✓ Exact' : `${match.similarity}%`;
+        message += `📍 <b>${match.object}</b> (${similarity})\n   Location: ${match.location}\n\n`;
+      }
+
+      return ctx.replyWithHTML(message);
+    }
+
+    // Fallback: handle plain text response
+    const location = response.data;
     if (location === 'Not found') {
       ctx.reply(`Could not find location for ${object}`);
     } else {

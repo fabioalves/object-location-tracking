@@ -1,8 +1,8 @@
-const bot = require('./bot');
 const express = require('express');
 const sql = require('mssql');
 require('dotenv').config();
 const { poolPromise } = require('./database');
+const { fuzzyMatchObjects } = require('./fuzzyMatch');
 
 const app = express();
 
@@ -39,9 +39,9 @@ app.get('/add', async (req, res) => {
   }
 });
 
-// Search for object location
+// Search for object location with fuzzy matching
 app.get('/search', async (req, res) => {
-  const { object } = req.query;
+  const { object, format } = req.query;
   if (!object) {
     return res.status(400).send('Missing object parameter');
   }
@@ -49,11 +49,24 @@ app.get('/search', async (req, res) => {
   try {
     const pool = await poolPromise;
     const result = await pool.request()
-      .input('object', sql.NVarChar, object)
-      .query('SELECT location FROM objects WHERE object = @object');
+      .query('SELECT object, location FROM objects');
 
-    const row = result.recordset[0];
-    res.send(row ? row.location : 'Not found');
+    const matches = fuzzyMatchObjects(object, result.recordset);
+
+    // Return JSON format if requested or if multiple matches found
+    if (format === 'json' || matches.length > 1) {
+      if (matches.length === 0) {
+        return res.json({ matches: [], message: 'Not found' });
+      }
+      return res.json({ matches });
+    }
+
+    // Return plain text for single exact/best match (backward compatible)
+    if (matches.length === 0) {
+      return res.send('Not found');
+    }
+    
+    res.send(matches[0].location);
   } catch (error) {
     console.error('Database query error:', error.message);
     res.status(500).send('Error retrieving data');
@@ -74,7 +87,6 @@ app.get('/health', async (req, res) => {
 // Graceful shutdown
 process.on('SIGINT', async () => {
   try {
-    bot.stop('SIGINT');                    // stop telegram bot
     const pool = await poolPromise;
     await pool.close();
     console.log('Database connection closed');

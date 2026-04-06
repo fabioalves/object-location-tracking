@@ -196,19 +196,56 @@ Stored successfully
 
 **Parameters:**
 - `object` (required): Name/identifier of the object to search
+- `format` (optional): Set to `json` to get all fuzzy matches with scores, otherwise returns plain text
 
-**Example Request:**
+**Fuzzy Matching Features:**
+- **Typo Tolerance**: Search "kes" to find "keys"
+- **Plural Handling**: Search "key" to find "keys" and vice versa
+- **Partial Matches**: Search "key" to find "keychain" and "key chain"
+- **Similarity Score**: Results are sorted by match quality (0-100%)
+- **Threshold**: Only matches with ≥75% similarity are returned
+
+**Example Request (Plain Text - Backward Compatible):**
 ```bash
 curl "http://localhost:3000/search?object=keys"
 ```
 
-**Response:**
+**Response (Single Best Match):**
 ```
 kitchen drawer
 ```
 
+**Example Request (JSON - Fuzzy Matches):**
+```bash
+curl "http://localhost:3000/search?object=key&format=json"
+```
+
+**Response (JSON with Multiple Matches):**
+```json
+{
+  "matches": [
+    {
+      "object": "keys",
+      "location": "kitchen drawer",
+      "similarity": 100
+    },
+    {
+      "object": "key chain",
+      "location": "bag pocket",
+      "similarity": 85
+    }
+  ]
+}
+```
+
+**Fuzzy Matching Examples:**
+- Search `"key"` finds: `"keys"` (100%, plural match), `"key chain"` (85%, partial match)
+- Search `"kes"` finds: `"keys"` (93%, typo tolerance)
+- Search `"wallet"` finds: `"wallet"` (100%, exact match)
+- Search `"wallets"` finds: `"wallet"` (100%, plural variant)
+
 **Status Codes:**
-- `200`: Found or not found
+- `200`: Found matches or not found message
 - `400`: Missing object parameter
 - `500`: Database error
 
@@ -264,24 +301,54 @@ Added laptop to desk
 ### /search Command
 **Usage:** `/search <object>`
 
-**Example:**
+The search command uses fuzzy matching to find similar objects even with typos or plurals.
+
+**Examples:**
 ```
 /search laptop
-/search wallet
+/search key
+/search kes
+/search wallets
 ```
 
-**Response:**
+**Response Examples:**
+
+Exact match:
 ```
-Location of laptop: desk
+Found 1 match:
+
+📍 keys (✓ Exact)
+   Location: kitchen drawer
 ```
 
-or
-
+Multiple matches with similarity scores:
 ```
-Could not find location for wallet
+Found 2 matches:
+
+📍 keys (✓ Exact)
+   Location: kitchen drawer
+
+📍 key chain (85%)
+   Location: bag pocket
+```
+
+No matches:
+```
+Could not find location for "xyz"
 ```
 
 ---
+
+## Fuzzy Search Technology
+
+The application uses **Levenshtein distance algorithm** to find similar object names with these features:
+
+- **Typo Tolerance**: "kes" → "keys" (93% match)
+- **Plural/Singular Matching**: "key" ↔ "keys" (100% match)
+- **Partial Matches**: "key" → "key chain", "keychain" (85%+ match)
+- **Case Insensitive**: "KEYS" = "keys"
+- **Similarity Threshold**: Only shows matches ≥75% similar
+- **Smart Sorting**: Results sorted by similarity score (highest first)
 
 ## Database Schema
 
