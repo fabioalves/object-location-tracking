@@ -1,14 +1,13 @@
+// bot.js
 const { Telegraf } = require('telegraf');
 const axios = require('axios');
 require('dotenv').config();
 
-// Initialize bot with token from environment variable
 const bot = new Telegraf(process.env.TELEGRAM_BOT_TOKEN);
+const API_BASE = process.env.API_BASE_URL || 'http://localhost:3000';
 
-// Add command handler
 bot.command('add', async (ctx) => {
   try {
-    // Parse command arguments
     const [object, ...locationParts] = ctx.message.text.split(' ').slice(1);
     const location = locationParts.join(' ');
 
@@ -16,8 +15,7 @@ bot.command('add', async (ctx) => {
       return ctx.reply('Usage: /add <object> <location>');
     }
 
-    // Send request to API
-    const response = await axios.get(`http://localhost:3000/add?object=${encodeURIComponent(object)}&location=${encodeURIComponent(location)}`);
+    await axios.get(`${API_BASE}/add?object=${encodeURIComponent(object)}&location=${encodeURIComponent(location)}`);
     ctx.reply(`Added ${object} to ${location}`);
   } catch (error) {
     console.error('Error in /add command:', error);
@@ -25,18 +23,15 @@ bot.command('add', async (ctx) => {
   }
 });
 
-// Search command handler
 bot.command('search', async (ctx) => {
   try {
-    // Parse object name
     const object = ctx.message.text.split(' ').slice(1).join(' ');
 
     if (!object) {
       return ctx.reply('Usage: /search <object>');
     }
 
-    // Query API
-    const response = await axios.get(`http://localhost:3000/search?object=${encodeURIComponent(object)}`);
+    const response = await axios.get(`${API_BASE}/search?object=${encodeURIComponent(object)}`);
     const location = response.data;
 
     if (location === 'Not found') {
@@ -50,11 +45,10 @@ bot.command('search', async (ctx) => {
   }
 });
 
-// Error handling
 bot.catch((err) => {
   console.error('Telegram bot error:', err);
 });
 
-// Start bot
 bot.launch();
 console.log('Telegram bot running...');
+module.exports = bot;

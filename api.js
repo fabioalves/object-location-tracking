@@ -1,3 +1,4 @@
+const bot = require('./bot');
 const express = require('express');
 const sql = require('mssql');
 require('dotenv').config();
@@ -73,12 +74,13 @@ app.get('/health', async (req, res) => {
 // Graceful shutdown
 process.on('SIGINT', async () => {
   try {
+    bot.stop('SIGINT');                    // stop telegram bot
     const pool = await poolPromise;
     await pool.close();
     console.log('Database connection closed');
     process.exit(0);
   } catch (error) {
-    console.error('Error closing database:', error.message);
+    console.error('Error during shutdown:', error.message);
     process.exit(1);
   }
 });
@@ -88,3 +90,5 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on http://0.0.0.0:${PORT}`);
 });
+
+require('./bot');
