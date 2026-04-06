@@ -73,6 +73,60 @@ app.get('/search', async (req, res) => {
   }
 });
 
+// Clean database - delete all or by location
+app.get('/clean', async (req, res) => {
+  const { type, location } = req.query;
+  
+  if (!type || (type !== 'all' && type !== 'location')) {
+    return res.status(400).json({ error: 'Invalid type. Use "all" or "location"' });
+  }
+
+  if (type === 'location' && !location) {
+    return res.status(400).json({ error: 'Location parameter required for type=location' });
+  }
+
+  try {
+    const pool = await poolPromise;
+    let deletedCount = 0;
+
+    if (type === 'all') {
+      // Delete all objects
+      const result = await pool.request().query('DELETE FROM objects');
+      deletedCount = result.rowsAffected[0] || 0;
+      
+      res.json({
+        success: true,
+        message: `Database cleaned! ${deletedCount} object${deletedCount !== 1 ? 's' : ''} deleted.`,
+        deletedCount
+      });
+    } else if (type === 'location') {
+      // Delete objects at specific location
+      const result = await pool.request()
+        .input('location', sql.NVarChar, location)
+        .query('DELETE FROM objects WHERE location = @location');
+      
+      deletedCount = result.rowsAffected[0] || 0;
+      
+      if (deletedCount === 0) {
+        return res.json({
+          success: false,
+          message: `No objects found at location: "${location}"`,
+          deletedCount: 0
+        });
+      }
+
+      res.json({
+        success: true,
+        message: `Location cleaned! ${deletedCount} object${deletedCount !== 1 ? 's' : ''} from "${location}" deleted.`,
+        deletedCount
+      });
+    }
+  } catch (error) {
+    console.error('Database clean error:', error.message);
+    res.status(500).json({ error: 'Error cleaning database' });
+  }
+});
+
 // Health check endpoint
 app.get('/health', async (req, res) => {
   try {

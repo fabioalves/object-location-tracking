@@ -277,24 +277,90 @@ Database connection failed
 
 ---
 
+### 4. Clean Database
+**Endpoint:** `GET /clean`
+
+**Parameters:**
+- `type` (required): `"all"` or `"location"`
+- `location` (required if type=location): Location to clean
+
+**Delete All Objects:**
+```bash
+curl "http://localhost:3000/clean?type=all"
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Database cleaned! 5 objects deleted.",
+  "deletedCount": 5
+}
+```
+
+**Delete by Location:**
+```bash
+curl "http://localhost:3000/clean?type=location&location=kitchen drawer"
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Location cleaned! 2 objects from \"kitchen drawer\" deleted.",
+  "deletedCount": 2
+}
+```
+
+**Response (No objects found):**
+```json
+{
+  "success": false,
+  "message": "No objects found at location: \"bedroom\"",
+  "deletedCount": 0
+}
+```
+
+**Status Codes:**
+- `200`: Successfully deleted
+- `400`: Invalid parameters
+- `500`: Database error
+
+⚠️ **Note:** The Telegram bot requires two-step confirmation before calling this endpoint. Direct API calls do NOT require confirmation.
+
+---
+
 ## Telegram Bot Commands
 
 Once the bot is running, you can interact with it via Telegram:
 
 ### /add Command
-**Usage:** `/add <object> <location>`
+**Usage:** `/add <object> ; <location>` (recommended for multi-word items)
 
-**Example:**
+**Alternative:** `/add <object> <location>` (space-separated, simple items)
+
+The semicolon separator (`;`) is recommended when your object or location contains multiple words.
+
+**Examples:**
 ```
+/add fones de ouvido ; mesa do escritório
+/add chaves ; gaveta da cozinha
 /add laptop desk
-/add wallet pocket
-/add phone bedroom nightstand
+/add wallet bedroom nightstand
 ```
 
 **Response:**
 ```
-Added laptop to desk
+✅ Added "fones de ouvido" to "mesa do escritório"
 ```
+
+**Usage Tips:**
+- Use semicolon (`;`) for **multi-word objects or locations**
+  - `/add fones de ouvido ; mesa do escritório`
+  - `/add remote control ; living room couch`
+- Use **space-separated** for **single-word items** (backward compatible)
+  - `/add keys drawer`
+  - `/add phone desk`
 
 ---
 
@@ -309,6 +375,7 @@ The search command uses fuzzy matching to find similar objects even with typos o
 /search key
 /search kes
 /search wallets
+/search fone
 ```
 
 **Response Examples:**
@@ -336,6 +403,63 @@ No matches:
 ```
 Could not find location for "xyz"
 ```
+
+---
+
+### /clean Command
+**Usage:** `/clean <parameter>`
+
+Deletes objects from the database with **two-step confirmation** to prevent accidental data loss.
+
+**Parameters:**
+- `/clean all` - Delete ALL objects from database
+- `/clean <location>` - Delete all objects at a specific location
+
+**Two-Step Confirmation Process:**
+
+Step 1 - Initiate clean:
+```
+/clean all
+🚨 WARNING: This will DELETE ALL objects from the database!
+
+Type: /confirm-clean-all
+To cancel: /cancel
+```
+
+Step 2 - Confirm deletion:
+```
+/confirm-clean-all
+✅ Database cleaned successfully!
+```
+
+**Example: Delete by Location**
+
+Step 1 - Initiate:
+```
+/clean mesa do escritório
+🚨 WARNING: This will DELETE ALL objects at location: "mesa do escritório"
+
+Type: /confirm-clean-location mesa do escritório
+To cancel: /cancel
+```
+
+Step 2 - Confirm:
+```
+/confirm-clean-location mesa do escritório
+✅ Location cleaned successfully!
+2 objects from "mesa do escritório" have been deleted.
+```
+
+**Related Commands:**
+- `/cancel` - Cancel pending clean operation
+- Confirmation expires after **5 minutes**
+
+**Safety Features:**
+✅ Requires explicit confirmation
+✅ User-specific (only the user who initiated can confirm)
+✅ 5-minute timeout to prevent accidental confirms
+✅ Clear warnings before deletion
+✅ Cancel option available
 
 ---
 
